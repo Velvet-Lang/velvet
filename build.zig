@@ -31,4 +31,18 @@ pub fn build(b: *std.Build) void {
 
     // Stub for packaging
     b.step("deb", "Future .deb packaging").dependOn(&build_cmd.step);
+
+    const async_opt = b.option(bool, "async", "Enable async codegen") orelse false;
+    if (async_opt) {
+        // Link async libs
+    }
+
+    const type_opt = b.option(bool, "types", "Enable typed codegen") orelse false;
+    if (type_opt) {
+        // Add type checks in codegen
+    }
+}
+
+test "codegen" {
+    // Run test_codegen.zig
 }
