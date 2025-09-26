@@ -1,85 +1,201 @@
-import re
-import json
+from velvet_lexer import VelvetLexer
+from velvet_ast import *
 from typing import List, Dict, Any
-import ast
-import subprocess
+import re
 
-# BNF Grammar (simplified for MVP; migrate to nom/lalrpop in Rust)
-# <program> ::= <deps> <stmts>
-# <deps> ::= (<id>)*
-# <stmts> ::= <stmt>*
-# <stmt> ::= <var> | <func> | <if> | <loop> | <inline> | <comment>
-# <var> ::= ~<id>=<expr>;
-# <func> ::= !<id>(<params>){<stmts> ^<expr>?};
-# <if> ::= ?<expr>{<stmts>};
-# <loop> ::= *<id>=<expr>..<expr>{<stmts>};
+# Updated BNF:
+# <program> ::= <imports> <deps> <stmts>
+# <imports> ::= import "<path>";*
+# <deps> ::= <dep>*
+# <stmt> ::= <decorator>* (<var> | <func> | <macro> | <match> | <pattern> | <if> | <loop> | <inline>)
+# <var> ::= ~<id>(:<type>)?=<expr>;
+# <type> ::= int | str | list<<type>> | ...
+# <func> ::= (async)? !<id>(<params>){<stmts> ^<expr>?};
+# <macro> ::= !macro <id> {<expansion>};
+# <match> ::= match <expr> { <case>* _ => <stmt> };
+# <case> ::= <pat> => <stmt>,
+# <pattern> ::= let <pat> = <expr>;
 # <inline> ::= #<lang>{<code>};
-# <comment> ::= @<text>
-# <expr> ::= <id> | <num> | <str> | <op><expr> | <expr><op><expr>
-# Type Mapping: Velvet ~list -> Python list; ~str -> str; etc. (via context dict)
+# Type mappings extended: list<int> -> Rust Vec<i32>, Python list, etc.
 
 class VelvetParser:
     def __init__(self):
+        self.lexer = VelvetLexer()
         self.tokens = []
-        self.ast = {}
-        self.dependencies = []
-        self.inline_blocks = []
-        self.type_map = {"~list": list, "~str": str, "~int": int, "~float": float}  # Inline mapping
+        self.pos = 0
+        self.ast = AST([], [], [], [])
 
-    def tokenize(self, code: str) -> List[str]:
-        code = re.sub(r'@.*?$', '', code, flags=re.MULTILINE)
-        tokens = re.findall(r'[<>#~!?*^{};=+\-/\(\)\[\]0-9a-zA-Z"]+|".*?"', code)
-        self.tokens = [t.strip() for t in tokens if t.strip()]
-        return self.tokens
+    def parse(self, code: str) -> AST:
+        self.tokens = self.lexer.lex(code)
+        self.parse_imports()
+        self.parse_deps()
+        while self.pos < len(self.tokens):
+            decos = self.parse_decorators()
+            stmt = self.parse_stmt()
+            if decos:
+                for deco in reversed(decos):
+                    stmt = DecoratorNode(deco, stmt)
+            self.ast.nodes.append(stmt)
+        self.parse_inline(code)  # Still regex for inline
+        return self.ast
 
-    def parse_dependencies(self):
-        # Existing...
+    def parse_imports(self):
+        while self.peek() == 'IMPORT':
+            self.consume('IMPORT')
+            path = self.consume('STR')[1:-1]  # "path.vel"
+            self.consume('SEMI')
+            self.ast.imports.append(ImportNode(path))
+            # Load and merge AST? Stub: assume single file
+
+    def parse_deps(self):
+        while self.peek() == 'DEP_START':
+            self.consume('DEP_START')
+            dep = self.consume('ID')
+            self.consume('DEP_END')
+            self.ast.deps.append(dep)
+
+    def parse_decorators(self):
+        decos = []
+        while self.peek() == 'DECORATOR':
+            decos.append(self.consume('DECORATOR')[1:])  # @inline -> inline
+        return decos
+
+    def parse_stmt(self):
+        tok = self.peek()
+        if tok == 'VAR':
+            return self.parse_var()
+        elif tok == 'FUNC' or self.peek(1) == 'FUNC':  # async !
+            return self.parse_func()
+        elif tok == 'MACRO':
+            return self.parse_macro()
+        elif tok == 'MATCH':
+            return self.parse_match()
+        elif tok == 'LET':
+            return self.parse_pattern()
+        # Add if, loop, etc.
+        else:
+            self.pos += 1
+            return Node()  # Placeholder
+
+    def parse_var(self):
+        self.consume('VAR')
+        name = self.consume('ID')
+        typ = None
+        if self.peek() == 'COLON':
+            self.consume('COLON')
+            typ = self.parse_type()
+        self.consume('EQ')
+        expr = self.parse_expr()
+        self.consume('SEMI')
+        return VarNode(name, typ, expr)
+
+    def parse_type(self):
+        base = self.consume('ID')
+        if self.peek() == '<':
+            self.consume('<')
+            inner = self.parse_type()
+            self.consume('>')
+            return f"{base}<{inner}>"
+        return base
+
+    def parse_func(self):
+        async_flag = False
+        if self.peek() == 'ASYNC':
+            async_flag = True
+            self.consume('ASYNC')
+        self.consume('FUNC')
+        name = self.consume('ID')
+        self.consume('LPAREN')
+        params = []
+        while self.peek() != 'RPAREN':
+            params.append(self.parse_var())  # Simplified
+            if self.peek() == 'COMMA': self.consume('COMMA')
+        self.consume('RPAREN')
+        self.consume('LBRACE')
+        body = []
+        while self.peek() != 'RBRACE' and self.peek() != '^':
+            body.append(self.parse_stmt())
+        ret = None
+        if self.peek() == '^':
+            self.consume('^')
+            ret = self.parse_expr()
+        self.consume('RBRACE')
+        self.consume('SEMI')
+        return FuncNode(name, params, body, ret, async_flag)
+
+    def parse_macro(self):
+        self.consume('MACRO')
+        name = self.consume('ID')
+        self.consume('LBRACE')
+        body = ''  # Collect until }
+        while self.peek() != 'RBRACE':
+            body += self.tokens[self.pos][1] + ' '
+            self.pos += 1
+        self.consume('RBRACE')
+        self.consume('SEMI')
+        return MacroNode(name, body)
+
+    def parse_match(self):
+        self.consume('MATCH')
+        expr = self.parse_expr()
+        self.consume('LBRACE')
+        cases = []
+        while self.peek() != 'RBRACE':
+            pat = self.parse_pat()
+            self.consume('ARROW')
+            stmt = self.parse_stmt()
+            cases.append({'pat': pat, 'stmt': stmt})
+            if self.peek() == 'COMMA': self.consume('COMMA')
+        self.consume('RBRACE')
+        self.consume('SEMI')
+        return MatchNode(expr, cases)
+
+    def parse_pattern(self):
+        self.consume('LET')
+        pat = self.parse_pat()
+        self.consume('EQ')
+        expr = self.parse_expr()
+        self.consume('SEMI')
+        return PatternNode(pat, expr)
+
+    def parse_pat(self):
+        # Stub: (x,y) or id
+        return 'pat'  # Expand
+
+    def parse_expr(self):
+        # Stub: id op id, etc.
+        return 'expr'
 
     def parse_inline(self, code: str):
         matches = re.findall(r'#(\w+)\s*\{(.*?)\}', code, re.DOTALL)
         for lang, block in matches:
-            self.inline_blocks.append((lang, block))
+            self.ast.inline.append(InlineNode(lang, block))
 
-    def parse_core(self):
-        # Expanded: Build AST per BNF
-        i = 0
-        while i < len(self.tokens):
-            tok = self.tokens[i]
-            if tok == '~':  # Var
-                # Parse ~x=5;
-                self.ast.setdefault('vars', []).append({'type': 'var', 'tokens': self.tokens[i:i+3]})
-                i += 3
-            elif tok == '!':  # Func
-                # Parse !add(~a,~b){^a+b};
-                self.ast.setdefault('funcs', []).append({'type': 'func', 'tokens': self.tokens[i:]})
-                break  # Simplified
-            # Add for ?, *, etc.
-            i += 1
+    def peek(self, offset=0):
+        if self.pos + offset < len(self.tokens):
+            return self.tokens[self.pos + offset][0]
+        return None
 
-    def generate_ir(self) -> Dict[str, Any]:
-        ir = {
-            'dependencies': self.dependencies,
-            'inline': self.inline_blocks,
-            'ast': self.ast,
-            'types': self.type_map
-        }
-        return ir
+    def consume(self, expected):
+        tok, val = self.tokens[self.pos]
+        if tok == expected:
+            self.pos += 1
+            return val
+        raise ValueError(f"Expected {expected}, got {tok}")
 
-    def parse(self, code: str, output_ir: str = None) -> Dict[str, Any]:
-        self.tokenize(code)
-        self.parse_dependencies()
-        self.parse_inline(code)
-        self.parse_core()
-        result = self.generate_ir()
-        if output_ir:
-            with open(output_ir, 'w') as f:
-                json.dump(result, f, indent=2)
-        return result
-
-# Usage...
+# Usage
 if __name__ == '__main__':
-    import sys
-    code = sys.stdin.read() if not sys.argv[1:] else open(sys.argv[1]).read()
+    code = '''
+    import "mod.vel";
+    <std>
+    @inline
+    ~x: int = 5;
+    async !fetch(){ await 1; ^2 };
+    !macro inc { x + 1 };
+    match y { 1 => print, _ => err };
+    let (a,b) = point;
+    #rust { println!("Hi"); }
+    '''
     parser = VelvetParser()
-    result = parser.parse(code, output_ir='ir.json' if '--output-ir' in sys.argv else None)
-    print(json.dumps(result, indent=2))
+    ast = parser.parse(code)
+    print(ast)
