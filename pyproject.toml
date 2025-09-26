@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "velvet-lang"
+version = "0.1.0"
+description = "Velvet Programming Language CLI and Parser"
+authors = ["Your Name <your.email@example.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+rich = "^13.8" # For cyberpunk-themed CLI
+click = "^8.1" # CLI command parsing (alternative to argparse)
+pyyaml = "^6.0" # For config files (if needed)
+
+[tool.poetry.scripts]
+weave = "weave.main:main"
+vel = "vel.main:main"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
