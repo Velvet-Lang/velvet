@@ -1,0 +1,6 @@
+<std>
+#rust { println!("Inline Rust!"); }
+#go { fmt.Println("Inline Go!"); }
+#java { System.out.println("Inline Java!"); }
+#csharp { Console.WriteLine("Inline C#!"); }
+#julia { println("Inline Julia!") }
