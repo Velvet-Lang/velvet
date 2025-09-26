@@ -3,3 +3,6 @@ silk-gui > https://github.com/Velvet-Lang/silk-gui.git
 crux-lib > https://github.com/Velvet-Lang/crux-lib.git
 nestdb-lib > https://github.com/Velvet-Lang/nestdb-lib.git
 aegis-lib > https://github.com/Velvet-Lang/aegis-lib.git
+vel-std > https://github.com/Velvet-Lang/vel-std.git
+vel-net > https://github.com/Velvet-Lang/vel-net.git
+vel-db > https://github.com/Velvet-Lang/vel-db.git
