@@ -1,20 +1,32 @@
-import sys
+import click
 from rich.console import Console
-from rich.theme import Theme
 from rich.panel import Panel
-import subprocess  # Simulate run
+from rich.theme import Theme
+import subprocess
+import sys
 
-cyber_theme = Theme({"run": "blue bold underline"})
-
+cyber_theme = Theme({"run": "blue bold underline", "debug": "magenta blink"})
 console = Console(theme=cyber_theme)
 
+@click.group()
+def cli():
+    pass
+
+@cli.command()
+@click.argument('project')
 def run(project):
-    console.print(Panel(f"Velvet Runner: Executing {project} in cyber mode...", style="run"))
-    # Placeholder: Interpret .weave (slower)
-    subprocess.run(["python", "-m", "interpreter", project])  # Hypothetical
+    console.print(Panel(f"Running {project} in cyber mode...", style="run"))
+    # Interpret .weave or .vel
+    subprocess.run([sys.executable, "src/velvet_parser.py", project, "--exec"])
+    console.print(Panel("Execution complete.", style="success"))
+
+@cli.command()
+@click.argument('project')
+def debug(project):
+    console.print(Panel(f"Debug {project}: Neon traces...", style="debug"))
+    # Enhanced: Step-through, vars dump
+    subprocess.run([sys.executable, "src/utils/inline_exec.py", "--allow-all", project])
+    # Add Rich live display
 
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        run(sys.argv[1])
-    else:
-        console.print("[red]Usage: vel <project>[/red]")
+    cli()
