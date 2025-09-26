@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
 
 @dataclass
@@ -6,9 +6,27 @@ class Node:
     pass
 
 @dataclass
+class TypeNode(Node):
+    base: str
+    params: List['TypeNode'] = field(default_factory=list)  # For generics
+
+@dataclass
+class MapType(TypeNode):
+    key: TypeNode
+    val: TypeNode
+
+@dataclass
+class SetType(TypeNode):
+    elem: TypeNode
+
+@dataclass
+class TupleType(TypeNode):
+    elems: List[TypeNode]
+
+@dataclass
 class VarNode(Node):
     name: str
-    type: Optional[str] = None
+    type: Optional[TypeNode] = None
     expr: Any = None
 
 @dataclass
@@ -31,8 +49,8 @@ class MatchNode(Node):
 
 @dataclass
 class PatternNode(Node):
-    pat: Any
-    expr: Any
+    kind: str  # 'var', 'tuple', 'list', 'dict'
+    parts: List[Any]  # Sub-patterns/values
 
 @dataclass
 class ImportNode(Node):
@@ -47,6 +65,18 @@ class DecoratorNode(Node):
 class InlineNode(Node):
     lang: str
     code: str
+
+@dataclass
+class IfNode(Node):
+    cond: Any
+    body: List[Node]
+
+@dataclass
+class LoopNode(Node):
+    var: str
+    start: Any
+    end: Any
+    body: List[Node]
 
 @dataclass
 class AST:
