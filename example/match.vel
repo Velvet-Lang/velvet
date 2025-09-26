@@ -1,0 +1,3 @@
+<std>
+~color: str = "red";
+match color { "red" => ~hot=1, "blue" => ~cold=1, _ => err };
