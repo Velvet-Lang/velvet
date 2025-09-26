@@ -12,6 +12,11 @@ rich = "^13.8"
 click = "^8.1"
 pyyaml = "^6.0"
 javalang = "^0.13"  # For Java type mapping (optional)
+prompt_toolkit = "^3.0"  # For REPL
+watchfiles = "^0.21"  # For module reload
+
+[tool.poetry.dev-dependencies]
+pytest = "^8.0"  # For tests
 
 [tool.poetry.scripts]
 vel = "vel.main:cli"
