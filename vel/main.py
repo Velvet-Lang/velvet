@@ -15,18 +15,28 @@ def cli():
 @cli.command()
 @click.argument('project')
 def run(project):
-    console.print(Panel(f"Running {project} in cyber mode...", style="run"))
-    # Interpret .weave or .vel
-    subprocess.run([sys.executable, "src/velvet_parser.py", project, "--exec"])
-    console.print(Panel("Execution complete.", style="success"))
+    # Existing...
 
 @cli.command()
 @click.argument('project')
 def debug(project):
-    console.print(Panel(f"Debug {project}: Neon traces...", style="debug"))
-    # Enhanced: Step-through, vars dump
-    subprocess.run([sys.executable, "src/utils/inline_exec.py", "--allow-all", project])
-    # Add Rich live display
+    # Existing...
+
+@cli.command()
+def update():
+    console.print(Panel("Updating libs via weave...", style="info"))
+    subprocess.run(["cargo", "run", "--", "update"])
+
+@cli.command()
+def repl():
+    console.print(Panel("Velvet REPL (cyberpunk mode)...", style="run"))
+    while True:
+        code = input(">> ")
+        if code == "exit": break
+        # Parse + exec inline/stub
+        parser = VelvetParser()
+        ast = parser.parse(code)
+        # Exec...
 
 if __name__ == '__main__':
     cli()
