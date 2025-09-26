@@ -1,1 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velvet Programming Language - About Velvet</title>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #141720 0%, #1e2230 100%);
+            color: #ffffff;
+            line-height: 1.7;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: linear-gradient(90deg, #4c2ea8, #aa6dec);
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo img {
+            height: 60px;
+            transition: transform 0.3s ease;
+        }
+
+        .logo img:hover {
+            transform: scale(1.1);
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        nav a {
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        nav a:hover {
+            background-color: #aa6dec;
+            transform: translateY(-2px);
+        }
+
+        nav a::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: 0;
+            left: 0;
+            background-color: #ffffff;
+            transition: width 0.3s ease;
+        }
+
+        nav a:hover::after {
+            width: 100%;
+        }
+
+        main {
+            max-width: 1400px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+            flex: 1;
+        }
+
+        h1 {
+            color: #aa6dec;
+            font-size: 3rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        section {
+            background: #4c2ea8;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        section:hover {
+            transform: translateY(-5px);
+        }
+
+        h2 {
+            color: #aa6dec;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        p, ul {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 1rem;
+        }
+
+        ul li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        ul li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: #aa6dec;
+            font-weight: bold;
+        }
+
+        footer {
+            background: #4c2ea8;
+            text-align: center;
+            padding: 1rem;
+            width: 100%;
+            box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        footer p {
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .header-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            nav ul {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            section {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <div class="logo">
+                <img src="velvet-lang-nobackground.png" alt="Velvet Logo">
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="home.html">Home</a></li>
+                    <li><a href="download.html">Download</a></li>
+                    <li><a href="about-velvet.html">About Velvet</a></li>
+                    <li><a href="writing-programs-in-velvet.html">Writing Programs in Velvet</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    <main>
+        <h1>About Velvet</h1>
+        <section>
+            <h2>Our Story</h2>
+            <p>Velvet was born in 2023 from a vision to create a programming language that balances simplicity and power. Drawing inspiration from Python and Rust, our team crafted Velvet to empower developers to write clean, efficient code.</p>
+        </section>
+        <section>
+            <h2>Key Features</h2>
+            <ul>
+                <li>Static typing with intelligent type inference</li>
+                <li>Built-in concurrency for scalable applications</li>
+                <li>Modular architecture for reusable code</li>
+                <li>Comprehensive standard library for rapid development</li>
+            </ul>
+        </section>
+        <section>
+            <h2>Join Our Community</h2>
+            <p>Connect with developers worldwide on GitHub, Discord, and our forums. Share your projects, ask questions, and contribute to Velvet's growth.</p>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2025 Velvet Programming Language. All rights reserved.</p>
+    </footer>
+</body>
+</html>
