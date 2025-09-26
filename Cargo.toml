@@ -1,6 +1,6 @@
 [package]
 name = "velvet-lang"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = "Velvet Programming Language Compiler"
 license = "MIT"
@@ -11,10 +11,9 @@ colored = "2.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 anyhow = "1.0"
-reqwest = { version = "0.12", features = ["blocking"] }  # For lib fetch fallback
-zip = "0.6"  # For .weave ZIP
-tokio = { version = "1.0", features = ["full"] }  # Async if needed
-std::process::Command  # Built-in
+reqwest = { version = "0.12", features = ["blocking"] }
+zip = "0.6"
+git2 = "0.18"  # For git pull in update
 
 [build-dependencies]
 fs_extra = "1.3"
@@ -23,7 +22,3 @@ fs_extra = "1.3"
 opt-level = 3
 lto = true
 codegen-units = 1
-
-[profile.dev]
-opt-level = 1
-debug = true
