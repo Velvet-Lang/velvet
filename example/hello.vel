@@ -1,0 +1,7 @@
+<crux-lib> <std>
+@ Lib example
+~x=5;
+!add(~a,~b){^a+b};
+?x>0{*i=0..x{add(i,1)}};
+#rust { println!("Inline Rust!"); }
+#go { fmt.Println("Go!"); }
