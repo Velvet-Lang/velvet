@@ -2,10 +2,12 @@ import ast
 import subprocess
 import sys
 import os
+import uuid
+import shutil
 from rich.console import Console
 from rich.panel import Panel
 from rich.theme import Theme
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 cyber_theme = Theme({"info": "cyan blink", "error": "red bold", "success": "green"})
 console = Console(theme=cyber_theme)
@@ -24,37 +26,39 @@ class InlineExecutor:
                 lang = arg.split('-')[-1]
                 self.allow_langs.add(lang)
 
-    def execute(self, blocks: List[Tuple[str, str]], file_path: str) -> bool:
+    def execute(self, blocks: List[Tuple[str, str]], file_path: str) -> Dict[int, Dict[str, Any]]:
         self.parse_flags()
-        success = True
-        for lang, code in blocks:
-            if lang not in self.supported_langs:
-                console.print(Panel(f"Unsupported: {lang}", style="error"))
-                success = False
-                continue
-            if lang not in self.allow_langs:
-                console.print(Panel(f"Blocked {lang} (use --allow-{lang})", style="warning"))
-                continue
+        results = {}
+        tmp_dir = f"tmp_inline_{uuid.uuid4()}"
+        os.makedirs(tmp_dir, exist_ok=True)
+        try:
+            for i, (lang, code) in enumerate(blocks):
+                if lang not in self.supported_langs:
+                    console.print(Panel(f"[{file_path}] Unsupported: {lang}", style="error"))
+                    continue
+                if lang not in self.allow_langs:
+                    console.print(Panel(f"[{file_path}] Blocked {lang} (use --allow-{lang})", style="warning"))
+                    continue
 
-            console.print(Panel(f"Exec {lang}...", style="info"))
-            try:
-                tmp_file = f"tmp.{self.get_ext(lang)}"
+                console.print(Panel(f"[{file_path}] Exec {lang}...", style="info"))
+                tmp_file = os.path.join(tmp_dir, f"inline_{i}.{self.get_ext(lang)}")
                 with open(tmp_file, "w") as f:
                     f.write(self.wrap_code(lang, code))
                 cmd = self.get_cmd(lang, tmp_file)
-                result = subprocess.run(cmd, capture_output=True, text=True)
-                os.remove(tmp_file)
-                if lang in {"c", "cpp", "rust", "go", "zig", "java", "csharp"}:
-                    os.remove("tmp")  # Exec binary
-                if result.returncode != 0:
-                    console.print(Panel(result.stderr, style="error"))
-                    success = False
+                env = os.environ.copy()
+                env['PATH'] = '/usr/bin:/bin'  # Limited for security
+                env['NO_NETWORK'] = '1'  # Stub sandbox
+                proc_result = subprocess.run(cmd, capture_output=True, text=True, env=env, shell=False if lang not in {'shell', 'powershell'} else True)
+                if os.path.exists("tmp"):
+                    os.remove("tmp")
+                results[i] = {'stdout': proc_result.stdout.strip(), 'stderr': proc_result.stderr.strip(), 'code': proc_result.returncode}
+                if proc_result.returncode != 0:
+                    console.print(Panel(f"[{file_path}] {lang} error: {proc_result.stderr}", style="error"))
                 else:
-                    console.print(Panel(result.stdout, style="success"))
-            except Exception as e:
-                console.print(Panel(f"{lang} error: {str(e)}", style="error"))
-                success = False
-        return success
+                    console.print(Panel(proc_result.stdout, style="success"))
+        finally:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+        return results
 
     def get_ext(self, lang):
         return {
@@ -65,33 +69,44 @@ class InlineExecutor:
         }.get(lang, "txt")
 
     def wrap_code(self, lang, code):
+        if lang == "python":
+            return code
         if lang == "c":
             return f"#include <stdio.h>\nint main() {{ {code} return 0; }}"
-        elif lang == "cpp":
+        if lang == "cpp":
             return f"#include <iostream>\nint main() {{ {code} return 0; }}"
-        elif lang == "java":
+        if lang == "java":
             return f"public class Tmp {{ public static void main(String[] args) {{ {code} }} }}"
-        elif lang == "csharp":
+        if lang == "csharp":
             return f"using System; class Tmp {{ static void Main() {{ {code} }} }}"
-        # Add wrappers for others if needed
+        if lang == "rust":
+            return f"fn main() {{ {code} }}"
+        if lang == "go":
+            return f"package main\nimport \"fmt\"\nfunc main() {{ {code} }}"
+        if lang == "zig":
+            return f"pub fn main() !void {{ {code} }}"
+        # Others no wrap needed
         return code
 
     def get_cmd(self, lang, file):
         if lang == "python": return ["python", file]
-        elif lang == "shell": return ["bash", file]
-        elif lang == "powershell": return ["powershell", "-File", file]
-        elif lang == "rust": return ["rustc", file, "-o", "tmp"]
-        elif lang == "go": return ["go", "run", file]
-        elif lang == "crystal": return ["crystal", "run", file]
-        elif lang == "ruby": return ["ruby", file]
-        elif lang == "c": return ["gcc", file, "-o", "tmp"]
-        elif lang == "cpp": return ["g++", file, "-o", "tmp"]
-        elif lang == "csharp": return ["csc", file]  # Assume mono/csc
-        elif lang == "julia": return ["julia", file]
-        elif lang == "zig": return ["zig", "run", file]
-        elif lang == "lua": return ["lua", file]
-        elif lang == "java": return ["javac", file, "&&", "java", "Tmp"]
-        elif lang == "javascript": return ["node", file]
+        if lang == "shell": return ["bash", file]
+        if lang == "powershell": return ["powershell", "-File", file]
+        if lang == "rust": return ["rustc", file, "-o", "tmp"]
+        if lang == "go": return ["go", "run", file]
+        if lang == "crystal": return ["crystal", "run", file]
+        if lang == "ruby": return ["ruby", file]
+        if lang == "c": return ["gcc", file, "-o", "tmp"]
+        if lang == "cpp": return ["g++", file, "-o", "tmp"]
+        if lang == "csharp": return ["csc", file, "&&", "mono", "tmp.exe"]
+        if lang == "julia": return ["julia", file]
+        if lang == "zig": return ["zig", "run", file]
+        if lang == "lua": return ["lua", file]
+        if lang == "java": return ["javac", file, "&&", "java", "Tmp"]
+        if lang == "javascript": return ["node", file]
         return []
 
-# Usage...
+if __name__ == "__main__":
+    executor = InlineExecutor()
+    sample_blocks = [("python", 'print("Hello from inline Python!")')]
+    executor.execute(sample_blocks, "test.vel")
