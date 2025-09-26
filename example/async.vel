@@ -1,0 +1,4 @@
+<std>
+~url: str = "http://example.com";
+async !get(~u: str){ await fetch(u); ^res };
+get(url)
