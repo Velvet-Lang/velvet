@@ -13,7 +13,7 @@ class VelvetLexer:
             ('EQ', r'='), ('COLON', r':'), ('SEMI', r';'),
             ('ARROW', r'=>'), ('ID', r'[a-zA-Z_][a-zA-Z0-9_]*'),
             ('NUM', r'\d+'), ('STR', r'".*?"'), ('OP', r'[+\-*/]'),
-            ('COMMENT', r'@.*?$'),
+            ('COMMENT', r'@.*?$'), ('LBRACKET', r'\['), ('RBRACKET', r'\]'),
         ]
         self.token_re = re.compile('|'.join(f'(?P<{name}>{pat})' for name, pat in self.token_specs), re.MULTILINE)
 
